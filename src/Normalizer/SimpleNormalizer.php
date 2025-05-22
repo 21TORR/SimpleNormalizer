@@ -78,7 +78,7 @@ class SimpleNormalizer
 
 	/**
 	 */
-	public function normalizeArray (array $array, array $context) : array
+	public function normalizeArray (array $array, array $context = []) : array
 	{
 		$result = [];
 		$isList = array_is_list($array);
@@ -112,7 +112,7 @@ class SimpleNormalizer
 	 * Normalizes a map of values.
 	 * Will JSON-encode to `{}` when empty.
 	 */
-	public function normalizeMap (array $array, array $context) : array|\stdClass
+	public function normalizeMap (array $array, array $context = []) : array|\stdClass
 	{
 		// return stdClass if the array is empty here, as it will be automatically normalized to `{}` in JSON.
 		return $this->normalizeArray($array, $context) ?: new \stdClass();

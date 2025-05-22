@@ -1,3 +1,11 @@
+1.3.3
+=====
+
+* (improvement) Add convenience default parameters.
+* (improvement) Require PHP 8.4+
+* (improvement) Bump dependencies.
+
+
 1.3.2
 =====
 
