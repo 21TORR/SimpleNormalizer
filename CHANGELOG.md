@@ -1,3 +1,9 @@
+1.3.3
+=====
+
+* (improvement) Add convenience default parameters.
+
+
 1.3.2
 =====
 
