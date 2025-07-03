@@ -2,6 +2,7 @@
 
 namespace Tests\Torr\SimpleNormalizer\Normalizer;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Torr\SimpleNormalizer\Exception\UnsupportedTypeException;
 use Torr\SimpleNormalizer\Test\SimpleNormalizerTestTrait;
@@ -26,8 +27,9 @@ final class BasicTypesNormalizerTest extends TestCase
 	}
 
 	/**
-	 * @dataProvider provideBasicValue
+	 *
 	 */
+	#[DataProvider("provideBasicValue")]
 	public function testBasicValue (mixed $input, mixed $expected) : void
 	{
 		$normalizer = $this->createNormalizer();
@@ -43,8 +45,9 @@ final class BasicTypesNormalizerTest extends TestCase
 	}
 
 	/**
-	 * @dataProvider provideInvalidValue
+	 *
 	 */
+	#[DataProvider("provideInvalidValue")]
 	public function testInvalidValue (mixed $input) : void
 	{
 		$this->expectException(UnsupportedTypeException::class);

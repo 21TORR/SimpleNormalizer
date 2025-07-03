@@ -2,6 +2,7 @@
 
 namespace Tests\Torr\SimpleNormalizer\Normalizer;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVO;
 use Torr\SimpleNormalizer\Exception\IncompleteNormalizationException;
@@ -31,8 +32,9 @@ class SimpleNormalizerTest extends TestCase
 	}
 
 	/**
-	 * @dataProvider provideJsonVerifierEnabled
+	 *
 	 */
+	#[DataProvider('provideJsonVerifierEnabled')]
 	public function testJsonVerifierEnabled (callable $call) : void
 	{
 		$verifier = $this->createMock(ValidJsonVerifier::class);
