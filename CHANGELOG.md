@@ -1,3 +1,9 @@
+1.4.0
+=====
+
+* (feature) Add `ValidJsonVerifier`, that checks, that every normalizer correctly generated JSON-compatible values.
+
+
 1.3.3
 =====
 

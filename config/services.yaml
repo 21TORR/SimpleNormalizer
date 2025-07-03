@@ -11,3 +11,4 @@ services:
 
     Torr\SimpleNormalizer\Normalizer\SimpleNormalizer:
         $objectNormalizers: !tagged_locator {tag: 'torr.normalizer.simple-object-normalizer', default_index_method: 'getNormalizedType'}
+        $isDebug: '%kernel.debug%'
