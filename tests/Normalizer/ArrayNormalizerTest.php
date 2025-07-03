@@ -2,6 +2,7 @@
 
 namespace Tests\Torr\SimpleNormalizer\Normalizer;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Torr\SimpleNormalizer\Test\SimpleNormalizerTestTrait;
 
@@ -24,8 +25,9 @@ final class ArrayNormalizerTest extends TestCase
 	}
 
 	/**
-	 * @dataProvider provideListArray
+	 *
 	 */
+	#[DataProvider("provideListArray")]
 	public function testListArray (array $input, array $expected) : void
 	{
 		$normalizer = $this->createNormalizer();
@@ -46,8 +48,9 @@ final class ArrayNormalizerTest extends TestCase
 	}
 
 	/**
-	 * @dataProvider provideAssociativeArray
+	 *
 	 */
+	#[DataProvider("provideAssociativeArray")]
 	public function testAssociativeArray (array $input, array $expected) : void
 	{
 		$normalizer = $this->createNormalizer();
