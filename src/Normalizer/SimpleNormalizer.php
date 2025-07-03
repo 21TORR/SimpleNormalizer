@@ -18,6 +18,7 @@ use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
  * = the object normalizers), as this way we can provide a full path to the invalid element in the JSON.
  *
  * @readonly
+ *
  * @final
  */
 class SimpleNormalizer
@@ -44,6 +45,7 @@ class SimpleNormalizer
 
 		return $normalizedValue;
 	}
+
 	/**
 	 */
 	public function normalizeArray (array $array, array $context = []) : array
@@ -74,8 +76,6 @@ class SimpleNormalizer
 
 		return $normalizedValue;
 	}
-
-
 
 	/**
 	 * The actual normalize logic, that recursively normalizes the value.

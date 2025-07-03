@@ -17,11 +17,11 @@
 		"symfony/http-kernel": "^7.2"
 	},
 	"require-dev": {
-		"21torr/janus": "^1.4",
-		"bamarni/composer-bin-plugin": "^1.8",
+		"21torr/janus": "^1.5.1",
+		"bamarni/composer-bin-plugin": "^1.8.2",
 		"doctrine/common": "^3.5",
-		"roave/security-advisories": "dev-latest",
-		"phpunit/phpunit": "^12.2.5"
+		"phpunit/phpunit": "^12.2.5",
+		"roave/security-advisories": "dev-latest"
 	},
 	"autoload": {
 		"psr-4": {
@@ -35,6 +35,7 @@
 	},
 	"config": {
 		"allow-plugins": {
+			"21torr/janus": true,
 			"bamarni/composer-bin-plugin": true
 		},
 		"sort-packages": true
@@ -48,11 +49,11 @@
 	"scripts": {
 		"fix-lint": [
 			"@composer bin c-norm normalize \"$(pwd)/composer.json\" --indent-style tab --indent-size 1 --ansi",
-			"vendor-bin/cs-fixer/vendor/bin/php-cs-fixer fix --diff --config vendor-bin/cs-fixer/vendor/21torr/php-cs-fixer/.php-cs-fixer.dist.php --no-interaction --ansi"
+			"PHP_CS_FIXER_IGNORE_ENV=1 vendor-bin/cs-fixer/vendor/bin/php-cs-fixer fix --diff --config vendor-bin/cs-fixer/vendor/21torr/php-cs-fixer/.php-cs-fixer.dist.php --no-interaction --ansi"
 		],
 		"lint": [
 			"@composer bin c-norm normalize \"$(pwd)/composer.json\" --indent-style tab --indent-size 1 --dry-run --ansi",
-			"vendor-bin/cs-fixer/vendor/bin/php-cs-fixer check --diff --config vendor-bin/cs-fixer/vendor/21torr/php-cs-fixer/.php-cs-fixer.dist.php --no-interaction --ansi"
+			"PHP_CS_FIXER_IGNORE_ENV=1 vendor-bin/cs-fixer/vendor/bin/php-cs-fixer check --diff --config vendor-bin/cs-fixer/vendor/21torr/php-cs-fixer/.php-cs-fixer.dist.php --no-interaction --ansi"
 		],
 		"test": [
 			"phpunit",
