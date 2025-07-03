@@ -21,7 +21,7 @@ class ValidJsonVerifier
 		if (null !== $invalidElement)
 		{
 			throw new IncompleteNormalizationException(
-				sprintf(
+				\sprintf(
 					"Found a JSON-incompatible value when normalizing. Found '%s' at path '%s', but expected only scalars, arrays and empty objects.",
 					get_debug_type($invalidElement->value),
 					implode(".", $invalidElement->path),
@@ -30,12 +30,11 @@ class ValidJsonVerifier
 		}
 	}
 
-
 	/**
 	 * Searches through the value and looks for anything that isn't valid JSON
 	 * (scalars, arrays or empty objects).
 	 *
-	 * @return InvalidJsonElement|null Returns null if everything is valid, otherwise the invalid value.
+	 * @return InvalidJsonElement|null returns null if everything is valid, otherwise the invalid value
 	 */
 	private function findInvalidJsonElement (mixed $value, array $path = ["$"]) : ?InvalidJsonElement
 	{
@@ -46,14 +45,14 @@ class ValidJsonVerifier
 		}
 
 		// only empty stdClass objects are allowed (as they are used to serialize to `{}`)
-		if (is_object($value))
+		if (\is_object($value))
 		{
 			return $value instanceof \stdClass && [] === get_object_vars($value)
 				? null
 				: new InvalidJsonElement($value, $path);
 		}
 
-		if (is_array($value))
+		if (\is_array($value))
 		{
 			foreach ($value as $key => $item)
 			{

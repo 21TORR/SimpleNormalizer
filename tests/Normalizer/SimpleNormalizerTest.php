@@ -3,15 +3,18 @@
 namespace Tests\Torr\SimpleNormalizer\Normalizer;
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVO;
 use Torr\SimpleNormalizer\Exception\IncompleteNormalizationException;
 use Torr\SimpleNormalizer\Normalizer\SimpleNormalizer;
-use PHPUnit\Framework\TestCase;
 use Torr\SimpleNormalizer\Normalizer\SimpleObjectNormalizerInterface;
 use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
 
-class SimpleNormalizerTest extends TestCase
+/**
+ * @internal
+ */
+final class SimpleNormalizerTest extends TestCase
 {
 	/**
 	 *
@@ -40,7 +43,7 @@ class SimpleNormalizerTest extends TestCase
 		$verifier = $this->createMock(ValidJsonVerifier::class);
 
 		$verifier
-			->expects($this->once())
+			->expects(self::once())
 			->method('ensureValidOnlyJsonTypes');
 
 		$normalizer = new SimpleNormalizer(
@@ -59,7 +62,6 @@ class SimpleNormalizerTest extends TestCase
 		]);
 	}
 
-
 	/**
 	 *
 	 */
@@ -68,7 +70,7 @@ class SimpleNormalizerTest extends TestCase
 		$verifier = $this->createMock(ValidJsonVerifier::class);
 
 		$verifier
-			->expects($this->never())
+			->expects(self::never())
 			->method('ensureValidOnlyJsonTypes');
 
 		$normalizer = new SimpleNormalizer(
@@ -82,7 +84,6 @@ class SimpleNormalizerTest extends TestCase
 		]);
 		self::assertTrue(true); // Just to ensure the test runs without exceptions
 	}
-
 
 	/**
 	 *
@@ -99,7 +100,6 @@ class SimpleNormalizerTest extends TestCase
 		$this->expectExceptionMessage("Found a JSON-incompatible value when normalizing. Found 'Tests\Torr\SimpleNormalizer\Fixture\DummyVO' at path '$', but expected only scalars, arrays and empty objects.");
 		$normalizer->normalize(new DummyVO(42));
 	}
-
 
 	/**
 	 *
@@ -124,15 +124,13 @@ class SimpleNormalizerTest extends TestCase
 		]);
 	}
 
-
 	/**
-	 *
+	 * @return ServiceLocator<mixed>
 	 */
 	private function createNormalizerObjectNormalizers (mixed $returnValue) : ServiceLocator
 	{
 		return new ServiceLocator([
-			DummyVO::class => static fn () => new readonly class ($returnValue) implements SimpleObjectNormalizerInterface
-			{
+			DummyVO::class => static fn () => new readonly class($returnValue) implements SimpleObjectNormalizerInterface {
 				public function __construct (
 					private mixed $returnValue,
 				) {}
