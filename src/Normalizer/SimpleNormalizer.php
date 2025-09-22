@@ -3,6 +3,8 @@
 namespace Torr\SimpleNormalizer\Normalizer;
 
 use Doctrine\Common\Util\ClassUtils;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Mapping\ClassMetadataFactory;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Torr\SimpleNormalizer\Exception\ObjectTypeNotSupportedException;
@@ -23,6 +25,8 @@ use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
  */
 class SimpleNormalizer
 {
+	private readonly ?ClassMetadataFactory $doctrineMetadata;
+
 	/**
 	 * @param ServiceLocator<SimpleObjectNormalizerInterface> $objectNormalizers
 	 */
@@ -30,7 +34,11 @@ class SimpleNormalizer
 		private readonly ServiceLocator $objectNormalizers,
 		private readonly bool $isDebug = false,
 		private readonly ?ValidJsonVerifier $validJsonVerifier = null,
-	) {}
+		?EntityManagerInterface $entityManager = null,
+	)
+	{
+		$this->doctrineMetadata = $entityManager?->getMetadataFactory();
+	}
 
 	/**
 	 */
@@ -104,12 +112,7 @@ class SimpleNormalizer
 
 			try
 			{
-				$className = $value::class;
-
-				if (class_exists(ClassUtils::class))
-				{
-					$className = ClassUtils::getRealClass($className);
-				}
+				$className = $this->normalizeClassName($value::class);
 
 				$normalizer = $this->objectNormalizers->get($className);
 				\assert($normalizer instanceof SimpleObjectNormalizerInterface);
@@ -129,6 +132,22 @@ class SimpleNormalizer
 			"Can't normalize type %s",
 			get_debug_type($value),
 		));
+	}
+
+	/**
+	 * Normalizes the class name
+	 */
+	private function normalizeClassName (string $className) : string
+	{
+		// if there is no doctrine, just return
+		if (null === $this->doctrineMetadata)
+		{
+			return $className;
+		}
+
+		return $this->doctrineMetadata->hasMetadataFor($className)
+			? $this->doctrineMetadata->getMetadataFor($className)->getName()
+			: $className;
 	}
 
 	/**

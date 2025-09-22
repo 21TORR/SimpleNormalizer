@@ -2,6 +2,9 @@
 
 namespace Tests\Torr\SimpleNormalizer\Normalizer;
 
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\ClassMetadataFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -122,6 +125,126 @@ final class SimpleNormalizerTest extends TestCase
 				"valid" => true,
 			],
 		]);
+	}
+
+	/**
+	 */
+	public function testWithoutEntityManager () : void
+	{
+		$locator = $this->createMock(ServiceLocator::class);
+
+		$locator->expects(self::once())
+			->method("get")
+			->with(DummyVO::class)
+			->willReturn(new readonly class implements SimpleObjectNormalizerInterface {
+				public function normalize (object $value, array $context, SimpleNormalizer $normalizer) : int
+				{
+					return 5;
+				}
+
+				public static function getNormalizedType () : string
+				{
+					return DummyVO::class;
+				}
+			});
+
+		$normalizer = new SimpleNormalizer(
+			objectNormalizers: $locator,
+			isDebug: true,
+			validJsonVerifier: new ValidJsonVerifier(),
+		);
+
+		$normalizer->normalize(new DummyVO(5));
+	}
+
+	/**
+	 */
+	public function testWithEntityManagerButNoMapping () : void
+	{
+		$metadataFactory = $this->createMock(ClassMetadataFactory::class);
+		$metadataFactory
+			->expects(self::once())
+			->method("hasMetadataFor")
+			->with(DummyVO::class)
+			->willReturn(false);
+
+		$entityManager = $this->createMock(EntityManagerInterface::class);
+		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
+
+		$locator = $this->createMock(ServiceLocator::class);
+
+		$locator->expects(self::once())
+			->method("get")
+			->with(DummyVO::class)
+			->willReturn(new readonly class implements SimpleObjectNormalizerInterface {
+				public function normalize (object $value, array $context, SimpleNormalizer $normalizer) : int
+				{
+					return 5;
+				}
+
+				public static function getNormalizedType () : string
+				{
+					return DummyVO::class;
+				}
+			});
+
+		$normalizer = new SimpleNormalizer(
+			objectNormalizers: $locator,
+			isDebug: true,
+			validJsonVerifier: new ValidJsonVerifier(),
+			entityManager: $entityManager,
+		);
+
+		$normalizer->normalize(new DummyVO(5));
+	}
+
+	/**
+	 */
+	public function testWithEntityManagerWithMapping () : void
+	{
+		$classMetaData = new ClassMetadata("SomeClass");
+
+		$metadataFactory = $this->createMock(ClassMetadataFactory::class);
+		$metadataFactory
+			->expects(self::once())
+			->method("hasMetadataFor")
+			->with(DummyVO::class)
+			->willReturn(true);
+
+		$metadataFactory
+			->expects(self::once())
+			->method("getMetadataFor")
+			->with(DummyVO::class)
+			->willReturn($classMetaData);
+
+		$entityManager = $this->createMock(EntityManagerInterface::class);
+		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
+
+		$locator = $this->createMock(ServiceLocator::class);
+
+		$locator->expects(self::once())
+			->method("get")
+			->with("SomeClass")
+			->willReturn(new readonly class implements SimpleObjectNormalizerInterface {
+				public function normalize (object $value, array $context, SimpleNormalizer $normalizer) : int
+				{
+					return 5;
+				}
+
+				public static function getNormalizedType () : string
+				{
+					return DummyVO::class;
+				}
+			});
+
+		$normalizer = new SimpleNormalizer(
+			objectNormalizers: $locator,
+			isDebug: true,
+			validJsonVerifier: new ValidJsonVerifier(),
+			entityManager: $entityManager,
+		);
+
+		$normalizer->normalize(new DummyVO(5));
 	}
 
 	/**
