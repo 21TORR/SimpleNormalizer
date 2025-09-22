@@ -2,7 +2,6 @@
 
 namespace Torr\SimpleNormalizer\Normalizer;
 
-use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadataFactory;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
@@ -136,6 +135,10 @@ class SimpleNormalizer
 
 	/**
 	 * Normalizes the class name
+	 *
+	 * @param class-string $className
+	 *
+	 * @return class-string
 	 */
 	private function normalizeClassName (string $className) : string
 	{

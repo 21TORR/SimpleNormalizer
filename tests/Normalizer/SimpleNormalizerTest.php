@@ -9,9 +9,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVO;
+use Tests\Torr\SimpleNormalizer\Fixture\DummyVONormalizer;
 use Torr\SimpleNormalizer\Exception\IncompleteNormalizationException;
 use Torr\SimpleNormalizer\Normalizer\SimpleNormalizer;
-use Torr\SimpleNormalizer\Normalizer\SimpleObjectNormalizerInterface;
 use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
 
 /**
@@ -136,17 +136,7 @@ final class SimpleNormalizerTest extends TestCase
 		$locator->expects(self::once())
 			->method("get")
 			->with(DummyVO::class)
-			->willReturn(new readonly class implements SimpleObjectNormalizerInterface {
-				public function normalize (object $value, array $context, SimpleNormalizer $normalizer) : int
-				{
-					return 5;
-				}
-
-				public static function getNormalizedType () : string
-				{
-					return DummyVO::class;
-				}
-			});
+			->willReturn(new DummyVONormalizer(5));
 
 		$normalizer = new SimpleNormalizer(
 			objectNormalizers: $locator,
@@ -176,17 +166,7 @@ final class SimpleNormalizerTest extends TestCase
 		$locator->expects(self::once())
 			->method("get")
 			->with(DummyVO::class)
-			->willReturn(new readonly class implements SimpleObjectNormalizerInterface {
-				public function normalize (object $value, array $context, SimpleNormalizer $normalizer) : int
-				{
-					return 5;
-				}
-
-				public static function getNormalizedType () : string
-				{
-					return DummyVO::class;
-				}
-			});
+			->willReturn(new DummyVONormalizer(5));
 
 		$normalizer = new SimpleNormalizer(
 			objectNormalizers: $locator,
@@ -225,17 +205,7 @@ final class SimpleNormalizerTest extends TestCase
 		$locator->expects(self::once())
 			->method("get")
 			->with("SomeClass")
-			->willReturn(new readonly class implements SimpleObjectNormalizerInterface {
-				public function normalize (object $value, array $context, SimpleNormalizer $normalizer) : int
-				{
-					return 5;
-				}
-
-				public static function getNormalizedType () : string
-				{
-					return DummyVO::class;
-				}
-			});
+			->willReturn(new DummyVONormalizer(5));
 
 		$normalizer = new SimpleNormalizer(
 			objectNormalizers: $locator,
@@ -253,21 +223,7 @@ final class SimpleNormalizerTest extends TestCase
 	private function createNormalizerObjectNormalizers (mixed $returnValue) : ServiceLocator
 	{
 		return new ServiceLocator([
-			DummyVO::class => static fn () => new readonly class($returnValue) implements SimpleObjectNormalizerInterface {
-				public function __construct (
-					private mixed $returnValue,
-				) {}
-
-				public function normalize (object $value, array $context, SimpleNormalizer $normalizer) : mixed
-				{
-					return $this->returnValue;
-				}
-
-				public static function getNormalizedType () : string
-				{
-					return DummyVO::class;
-				}
-			},
+			DummyVO::class => static fn () => new DummyVONormalizer($returnValue),
 		]);
 	}
 }
