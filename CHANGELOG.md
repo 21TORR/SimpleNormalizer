@@ -1,3 +1,9 @@
+1.4.1
+=====
+
+* (improvement) Avoid using deprecated Doctrine internals when resolving class names.
+
+
 1.4.0
 =====
 
