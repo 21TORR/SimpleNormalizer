@@ -1,3 +1,9 @@
+1.5.0
+=====
+
+* (feature) Add normalization stack for better error reporting.
+
+
 1.4.1
 =====
 

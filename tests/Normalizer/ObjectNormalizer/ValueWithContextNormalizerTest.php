@@ -36,6 +36,10 @@ final class ValueWithContextNormalizerTest extends TestCase
 				[
 					"test" => 123,
 					"o" => "hai",
+					"simple-normalizer.debug-stack" => [
+						get_debug_type($value),
+						DummyVO::class,
+					],
 				],
 			);
 

@@ -25,6 +25,7 @@ use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
 class SimpleNormalizer
 {
 	private readonly ?ClassMetadataFactory $doctrineMetadata;
+	private const string STACK_CONTEXT = "simple-normalizer.debug-stack";
 
 	/**
 	 * @param ServiceLocator<SimpleObjectNormalizerInterface> $objectNormalizers
@@ -95,6 +96,13 @@ class SimpleNormalizer
 			return $value;
 		}
 
+		if (!isset($context[self::STACK_CONTEXT]) || !\is_array($context[self::STACK_CONTEXT]))
+		{
+			$context[self::STACK_CONTEXT] = [];
+		}
+
+		$context[self::STACK_CONTEXT][] = get_debug_type($value);
+
 		if (\is_array($value))
 		{
 			return $this->recursiveNormalizeArray($value, $context);
@@ -121,15 +129,17 @@ class SimpleNormalizer
 			catch (ServiceNotFoundException $exception)
 			{
 				throw new ObjectTypeNotSupportedException(\sprintf(
-					"Can't normalize type %s",
+					"Can't normalize type '%s' in stack %s",
 					get_debug_type($value),
+					implode(" > ", array_reverse($context[self::STACK_CONTEXT])),
 				), 0, $exception);
 			}
 		}
 
 		throw new UnsupportedTypeException(\sprintf(
-			"Can't normalize type %s",
+			"Can't normalize type %s in stack %s",
 			get_debug_type($value),
+			implode(" > ", array_reverse($context[self::STACK_CONTEXT])),
 		));
 	}
 
