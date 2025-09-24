@@ -67,7 +67,7 @@ final class ObjectNormalizationTest extends TestCase
 		$object->prop = 5;
 
 		$this->expectException(ObjectTypeNotSupportedException::class);
-		$this->expectExceptionMessage("Can't normalize type stdClass");
+		$this->expectExceptionMessage("Can't normalize type 'stdClass' in stack stdClass");
 		$normalizer->normalize($object);
 	}
 
