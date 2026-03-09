@@ -1,3 +1,9 @@
+1.5.1
+=====
+
+* (improvement) Support Symfony v8+
+
+
 1.5.0
 =====
 
