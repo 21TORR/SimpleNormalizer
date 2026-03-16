@@ -37,9 +37,9 @@ class ValidJsonVerifier
 	 * Searches through the value and looks for anything that isn't valid JSON
 	 * (scalars, arrays or empty objects).
 	 *
-	 * @return InvalidJsonElement|null returns null if everything is valid, otherwise the invalid value
-	 *
 	 * @param positive-int $maxDepth
+	 *
+	 * @return InvalidJsonElement|null returns null if everything is valid, otherwise the invalid value
 	 */
 	private function findInvalidJsonElement (mixed $value, array &$path, int $maxDepth) : ?InvalidJsonElement
 	{

@@ -10,8 +10,8 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVO;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVONormalizer;
-use Torr\SimpleNormalizer\Exception\InvalidMaxDepthException;
 use Torr\SimpleNormalizer\Exception\IncompleteNormalizationException;
+use Torr\SimpleNormalizer\Exception\InvalidMaxDepthException;
 use Torr\SimpleNormalizer\Exception\UnsupportedTypeException;
 use Torr\SimpleNormalizer\Normalizer\SimpleNormalizer;
 use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
@@ -180,7 +180,7 @@ final class SimpleNormalizerTest extends TestCase
 			->with(DummyVO::class)
 			->willReturn(false);
 
-		$entityManager = $this->createStub(EntityManagerInterface::class);
+		$entityManager = self::createStub(EntityManagerInterface::class);
 		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
 
 		$locator = $this->createMock(ServiceLocator::class);
@@ -219,7 +219,7 @@ final class SimpleNormalizerTest extends TestCase
 			->with(DummyVO::class)
 			->willReturn($classMetaData);
 
-		$entityManager = $this->createStub(EntityManagerInterface::class);
+		$entityManager = self::createStub(EntityManagerInterface::class);
 		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
 
 		$locator = $this->createMock(ServiceLocator::class);
@@ -258,7 +258,7 @@ final class SimpleNormalizerTest extends TestCase
 			->with(DummyVO::class)
 			->willReturn($classMetaData);
 
-		$entityManager = $this->createStub(EntityManagerInterface::class);
+		$entityManager = self::createStub(EntityManagerInterface::class);
 		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
 
 		$locator = $this->createMock(ServiceLocator::class);
@@ -293,7 +293,7 @@ final class SimpleNormalizerTest extends TestCase
 			->expects(self::never())
 			->method("getMetadataFor");
 
-		$entityManager = $this->createStub(EntityManagerInterface::class);
+		$entityManager = self::createStub(EntityManagerInterface::class);
 		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
 
 		$locator = $this->createMock(ServiceLocator::class);

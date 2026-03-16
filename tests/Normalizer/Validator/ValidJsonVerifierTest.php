@@ -136,5 +136,4 @@ final class ValidJsonVerifierTest extends TestCase
 			],
 		], 3);
 	}
-
 }
