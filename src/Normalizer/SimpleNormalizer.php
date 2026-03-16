@@ -26,6 +26,8 @@ class SimpleNormalizer
 {
 	private readonly ?ClassMetadataFactory $doctrineMetadata;
 	private const string STACK_CONTEXT = "simple-normalizer.debug-stack";
+	/** @var array<class-string, class-string> */
+	private array $normalizedClassNames = [];
 
 	/**
 	 * @param ServiceLocator<SimpleObjectNormalizerInterface> $objectNormalizers
@@ -158,7 +160,12 @@ class SimpleNormalizer
 			return $className;
 		}
 
-		return $this->doctrineMetadata->hasMetadataFor($className)
+		if (isset($this->normalizedClassNames[$className]))
+		{
+			return $this->normalizedClassNames[$className];
+		}
+
+		return $this->normalizedClassNames[$className] = $this->doctrineMetadata->hasMetadataFor($className)
 			? $this->doctrineMetadata->getMetadataFor($className)->getName()
 			: $className;
 	}

@@ -1,3 +1,10 @@
+1.5.2
+=====
+
+* (improvement) Cache Doctrine-normalized class names in `SimpleNormalizer` to avoid repeated metadata lookups for the same object type.
+* (improvement) Add test coverage to ensure class-name normalization is cached across repeated normalization calls.
+
+
 1.5.1
 =====
 
