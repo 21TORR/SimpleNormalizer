@@ -16,7 +16,8 @@ class ValidJsonVerifier
 	 */
 	public function ensureValidOnlyJsonTypes (mixed $value) : void
 	{
-		$invalidElement = $this->findInvalidJsonElement($value);
+		$path = ["$"];
+		$invalidElement = $this->findInvalidJsonElement($value, $path);
 
 		if (null !== $invalidElement)
 		{
@@ -36,7 +37,7 @@ class ValidJsonVerifier
 	 *
 	 * @return InvalidJsonElement|null returns null if everything is valid, otherwise the invalid value
 	 */
-	private function findInvalidJsonElement (mixed $value, array $path = ["$"]) : ?InvalidJsonElement
+	private function findInvalidJsonElement (mixed $value, array &$path) : ?InvalidJsonElement
 	{
 		// scalars are always valid
 		if (null === $value || \is_scalar($value))
@@ -49,17 +50,16 @@ class ValidJsonVerifier
 		{
 			return $value instanceof \stdClass && [] === get_object_vars($value)
 				? null
-				: new InvalidJsonElement($value, $path);
+				: new InvalidJsonElement($value, [...$path]);
 		}
 
 		if (\is_array($value))
 		{
 			foreach ($value as $key => $item)
 			{
-				$invalidItem = $this->findInvalidJsonElement(
-					$item,
-					[...$path, $key],
-				);
+				$path[] = $key;
+				$invalidItem = $this->findInvalidJsonElement($item, $path);
+				array_pop($path);
 
 				if (null !== $invalidItem)
 				{
@@ -70,6 +70,6 @@ class ValidJsonVerifier
 			return null;
 		}
 
-		return new InvalidJsonElement($value, $path);
+		return new InvalidJsonElement($value, [...$path]);
 	}
 }

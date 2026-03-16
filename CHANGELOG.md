@@ -4,6 +4,8 @@
 * (improvement) Reduce normalization overhead by tracking the debug stack internally across recursion instead of mutating it in context on each nested value.
 * (improvement) Cache Doctrine-normalized class names in `SimpleNormalizer` to avoid repeated metadata lookups for the same object type.
 * (improvement) Add test coverage to ensure class-name normalization is cached across repeated normalization calls.
+* (improvement) Optimize `ValidJsonVerifier` by reusing a mutable path stack during traversal instead of allocating a new path array for each nested element.
+* (improvement) Add dedicated verifier tests for deep-path reporting and first-invalid-element detection.
 
 
 1.5.1
