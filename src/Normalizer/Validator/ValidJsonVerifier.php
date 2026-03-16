@@ -48,7 +48,7 @@ class ValidJsonVerifier
 		// only empty stdClass objects are allowed (as they are used to serialize to `{}`)
 		if (\is_object($value))
 		{
-			return $value instanceof \stdClass && [] === get_object_vars($value)
+			return $value instanceof \stdClass && [] === (array) $value
 				? null
 				: new InvalidJsonElement($value, [...$path]);
 		}

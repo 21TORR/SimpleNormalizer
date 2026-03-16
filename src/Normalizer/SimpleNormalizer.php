@@ -113,7 +113,7 @@ class SimpleNormalizer
 			{
 				// Allow empty stdClass as a way to force a JSON {} instead of an
 				// array which would encode to []
-				if ($value instanceof \stdClass && [] === get_object_vars($value))
+				if ($value instanceof \stdClass && [] === (array) $value)
 				{
 					return $value;
 				}

@@ -6,6 +6,7 @@
 * (improvement) Add test coverage to ensure class-name normalization is cached across repeated normalization calls.
 * (improvement) Optimize `ValidJsonVerifier` by reusing a mutable path stack during traversal instead of allocating a new path array for each nested element.
 * (improvement) Add dedicated verifier tests for deep-path reporting and first-invalid-element detection.
+* (improvement) Optimize empty `stdClass` detection by using an `(array)` cast check instead of `get_object_vars()`.
 
 
 1.5.1
