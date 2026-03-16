@@ -46,7 +46,8 @@ class SimpleNormalizer
 	 */
 	public function normalize (mixed $value, array $context = []) : mixed
 	{
-		$normalizedValue = $this->recursiveNormalize($value, $context);
+		$stack = $this->extractInitialStack($context);
+		$normalizedValue = $this->recursiveNormalize($value, $context, $stack);
 
 		if ($this->isDebug)
 		{
@@ -60,7 +61,8 @@ class SimpleNormalizer
 	 */
 	public function normalizeArray (array $array, array $context = []) : array
 	{
-		$normalizedValue = $this->recursiveNormalizeArray($array, $context);
+		$stack = $this->extractInitialStack($context);
+		$normalizedValue = $this->recursiveNormalizeArray($array, $context, $stack);
 
 		if ($this->isDebug)
 		{
@@ -77,7 +79,8 @@ class SimpleNormalizer
 	public function normalizeMap (array $array, array $context = []) : array|\stdClass
 	{
 		// return stdClass if the array is empty here, as it will be automatically normalized to `{}` in JSON.
-		$normalizedValue = $this->recursiveNormalizeArray($array, $context) ?: new \stdClass();
+		$stack = $this->extractInitialStack($context);
+		$normalizedValue = $this->recursiveNormalizeArray($array, $context, $stack) ?: new \stdClass();
 
 		if ($this->isDebug)
 		{
@@ -91,58 +94,62 @@ class SimpleNormalizer
 	 * The actual normalize logic, that recursively normalizes the value.
 	 * It must never call one of the public methods above and just normalizes the value.
 	 */
-	private function recursiveNormalize (mixed $value, array $context = []) : mixed
+	private function recursiveNormalize (mixed $value, array $context, array &$stack) : mixed
 	{
 		if (null === $value || \is_scalar($value))
 		{
 			return $value;
 		}
 
-		if (!isset($context[self::STACK_CONTEXT]) || !\is_array($context[self::STACK_CONTEXT]))
-		{
-			$context[self::STACK_CONTEXT] = [];
-		}
+		$stack[] = get_debug_type($value);
 
-		$context[self::STACK_CONTEXT][] = get_debug_type($value);
-
-		if (\is_array($value))
+		try
 		{
-			return $this->recursiveNormalizeArray($value, $context);
-		}
-
-		if (\is_object($value))
-		{
-			// Allow empty stdClass as a way to force a JSON {} instead of an
-			// array which would encode to []
-			if ($value instanceof \stdClass && [] === get_object_vars($value))
+			if (\is_array($value))
 			{
-				return $value;
+				return $this->recursiveNormalizeArray($value, $context, $stack);
 			}
 
-			try
+			if (\is_object($value))
 			{
-				$className = $this->normalizeClassName($value::class);
+				// Allow empty stdClass as a way to force a JSON {} instead of an
+				// array which would encode to []
+				if ($value instanceof \stdClass && [] === get_object_vars($value))
+				{
+					return $value;
+				}
 
-				$normalizer = $this->objectNormalizers->get($className);
-				\assert($normalizer instanceof SimpleObjectNormalizerInterface);
+				try
+				{
+					$className = $this->normalizeClassName($value::class);
+					$normalizer = $this->objectNormalizers->get($className);
+					\assert($normalizer instanceof SimpleObjectNormalizerInterface);
 
-				return $normalizer->normalize($value, $context, $this);
+					// Preserve debug stack visibility for custom object normalizers.
+					$context[self::STACK_CONTEXT] = $stack;
+
+					return $normalizer->normalize($value, $context, $this);
+				}
+				catch (ServiceNotFoundException $exception)
+				{
+					throw new ObjectTypeNotSupportedException(\sprintf(
+						"Can't normalize type '%s' in stack %s",
+						get_debug_type($value),
+						implode(" > ", array_reverse($stack)),
+					), 0, $exception);
+				}
 			}
-			catch (ServiceNotFoundException $exception)
-			{
-				throw new ObjectTypeNotSupportedException(\sprintf(
-					"Can't normalize type '%s' in stack %s",
-					get_debug_type($value),
-					implode(" > ", array_reverse($context[self::STACK_CONTEXT])),
-				), 0, $exception);
-			}
+
+			throw new UnsupportedTypeException(\sprintf(
+				"Can't normalize type %s in stack %s",
+				get_debug_type($value),
+				implode(" > ", array_reverse($stack)),
+			));
 		}
-
-		throw new UnsupportedTypeException(\sprintf(
-			"Can't normalize type %s in stack %s",
-			get_debug_type($value),
-			implode(" > ", array_reverse($context[self::STACK_CONTEXT])),
-		));
+		finally
+		{
+			array_pop($stack);
+		}
 	}
 
 	/**
@@ -174,14 +181,14 @@ class SimpleNormalizer
 	 * The actual customized normalization logic for arrays, that recursively normalizes the value.
 	 * It must never call one of the public methods above and just normalizes the value.
 	 */
-	private function recursiveNormalizeArray (array $array, array $context = []) : array
+	private function recursiveNormalizeArray (array $array, array $context, array &$stack) : array
 	{
 		$result = [];
 		$isList = array_is_list($array);
 
 		foreach ($array as $key => $value)
 		{
-			$normalized = $this->recursiveNormalize($value, $context);
+			$normalized = $this->recursiveNormalize($value, $context, $stack);
 
 			// if the array was a list and the normalized value is null, just filter it out
 			if ($isList && null === $normalized)
@@ -202,5 +209,15 @@ class SimpleNormalizer
 		}
 
 		return $result;
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	private function extractInitialStack (array $context) : array
+	{
+		return isset($context[self::STACK_CONTEXT]) && \is_array($context[self::STACK_CONTEXT])
+			? $context[self::STACK_CONTEXT]
+			: [];
 	}
 }

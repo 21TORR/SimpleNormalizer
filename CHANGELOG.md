@@ -1,6 +1,7 @@
-1.5.2
+1.5.2 (unreleased)
 =====
 
+* (improvement) Reduce normalization overhead by tracking the debug stack internally across recursion instead of mutating it in context on each nested value.
 * (improvement) Cache Doctrine-normalized class names in `SimpleNormalizer` to avoid repeated metadata lookups for the same object type.
 * (improvement) Add test coverage to ensure class-name normalization is cached across repeated normalization calls.
 
