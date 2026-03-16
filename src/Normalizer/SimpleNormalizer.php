@@ -18,14 +18,13 @@ use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
  * The verifier is done on the top-level of every method (instead of at the point where the invalid values could occur
  * = the object normalizers), as this way we can provide a full path to the invalid element in the JSON.
  *
- * @readonly
- *
  * @final
  */
 class SimpleNormalizer
 {
 	private readonly ?ClassMetadataFactory $doctrineMetadata;
 	private const string STACK_CONTEXT = "simple-normalizer.debug-stack";
+
 	/** @var array<class-string, class-string> */
 	private array $normalizedClassNames = [];
 
@@ -216,8 +215,19 @@ class SimpleNormalizer
 	 */
 	private function extractInitialStack (array $context) : array
 	{
-		return isset($context[self::STACK_CONTEXT]) && \is_array($context[self::STACK_CONTEXT])
-			? $context[self::STACK_CONTEXT]
-			: [];
+		if (!isset($context[self::STACK_CONTEXT]) || !\is_array($context[self::STACK_CONTEXT]))
+		{
+			return [];
+		}
+
+		$stack = [];
+
+		foreach ($context[self::STACK_CONTEXT] as $entry)
+		{
+			\assert(\is_string($entry));
+			$stack[] = $entry;
+		}
+
+		return $stack;
 	}
 }
