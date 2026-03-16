@@ -12,12 +12,14 @@ use Torr\SimpleNormalizer\Exception\IncompleteNormalizationException;
 class ValidJsonVerifier
 {
 	/**
-	 * Ensures that only valid JSON types are present in the value, that means scalars, arrays and empty objects.
+	 * Ensures that only valid JSON types are present in the value that means scalars, arrays, and empty objects.
+	 *
+	 * @param positive-int $maxDepth
 	 */
-	public function ensureValidOnlyJsonTypes (mixed $value) : void
+	public function ensureValidOnlyJsonTypes (mixed $value, int $maxDepth) : void
 	{
 		$path = ["$"];
-		$invalidElement = $this->findInvalidJsonElement($value, $path);
+		$invalidElement = $this->findInvalidJsonElement($value, $path, $maxDepth);
 
 		if (null !== $invalidElement)
 		{
@@ -36,9 +38,20 @@ class ValidJsonVerifier
 	 * (scalars, arrays or empty objects).
 	 *
 	 * @return InvalidJsonElement|null returns null if everything is valid, otherwise the invalid value
+	 *
+	 * @param positive-int $maxDepth
 	 */
-	private function findInvalidJsonElement (mixed $value, array &$path) : ?InvalidJsonElement
+	private function findInvalidJsonElement (mixed $value, array &$path, int $maxDepth) : ?InvalidJsonElement
 	{
+		if (\count($path) - 1 > $maxDepth)
+		{
+			throw new IncompleteNormalizationException(\sprintf(
+				"Maximum JSON verification depth of %d exceeded at path '%s'.",
+				$maxDepth,
+				implode(".", $path),
+			));
+		}
+
 		// scalars are always valid
 		if (null === $value || \is_scalar($value))
 		{
@@ -58,7 +71,7 @@ class ValidJsonVerifier
 			foreach ($value as $key => $item)
 			{
 				$path[] = $key;
-				$invalidItem = $this->findInvalidJsonElement($item, $path);
+				$invalidItem = $this->findInvalidJsonElement($item, $path, $maxDepth);
 				array_pop($path);
 
 				if (null !== $invalidItem)

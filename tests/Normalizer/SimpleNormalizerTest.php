@@ -10,7 +10,9 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVO;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVONormalizer;
+use Torr\SimpleNormalizer\Exception\InvalidMaxDepthException;
 use Torr\SimpleNormalizer\Exception\IncompleteNormalizationException;
+use Torr\SimpleNormalizer\Exception\UnsupportedTypeException;
 use Torr\SimpleNormalizer\Normalizer\SimpleNormalizer;
 use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
 
@@ -86,6 +88,26 @@ final class SimpleNormalizerTest extends TestCase
 			"key" => new DummyVO(42),
 		]);
 		self::assertTrue(true); // Just to ensure the test runs without exceptions
+	}
+
+	/**
+	 */
+	public function testMaxDepthIsPassedToJsonVerifier () : void
+	{
+		$verifier = $this->createMock(ValidJsonVerifier::class);
+		$verifier
+			->expects(self::once())
+			->method("ensureValidOnlyJsonTypes")
+			->with("ok", 7);
+
+		$normalizer = new SimpleNormalizer(
+			objectNormalizers: $this->createNormalizerObjectNormalizers("ok"),
+			isDebug: true,
+			validJsonVerifier: $verifier,
+			maxDepth: 7,
+		);
+
+		$normalizer->normalize(new DummyVO(1));
 	}
 
 	/**
@@ -289,6 +311,40 @@ final class SimpleNormalizerTest extends TestCase
 
 		$normalizer->normalize(new DummyVO(5));
 		$normalizer->normalize(new DummyVO(5));
+	}
+
+	/**
+	 */
+	public function testMaxDepthExceeded () : void
+	{
+		$normalizer = new SimpleNormalizer(
+			objectNormalizers: new ServiceLocator([]),
+			maxDepth: 2,
+		);
+
+		$this->expectException(UnsupportedTypeException::class);
+		$this->expectExceptionMessage("Maximum normalization depth of 2 exceeded");
+
+		$normalizer->normalize([
+			[
+				[
+					"tooDeep" => true,
+				],
+			],
+		]);
+	}
+
+	/**
+	 */
+	public function testInvalidMaxDepth () : void
+	{
+		$this->expectException(InvalidMaxDepthException::class);
+		$this->expectExceptionMessage("The max depth must be at least 1.");
+
+		new SimpleNormalizer(
+			objectNormalizers: new ServiceLocator([]),
+			maxDepth: 0,
+		);
 	}
 
 	/**

@@ -6,6 +6,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadataFactory;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\DependencyInjection\ServiceLocator;
+use Torr\SimpleNormalizer\Exception\InvalidMaxDepthException;
 use Torr\SimpleNormalizer\Exception\ObjectTypeNotSupportedException;
 use Torr\SimpleNormalizer\Exception\UnsupportedTypeException;
 use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
@@ -24,6 +25,7 @@ class SimpleNormalizer
 {
 	private readonly ?ClassMetadataFactory $doctrineMetadata;
 	private const string STACK_CONTEXT = "simple-normalizer.debug-stack";
+	private const int DEFAULT_MAX_DEPTH = 128;
 
 	/** @var array<class-string, class-string> */
 	private array $normalizedClassNames = [];
@@ -36,8 +38,14 @@ class SimpleNormalizer
 		private readonly bool $isDebug = false,
 		private readonly ?ValidJsonVerifier $validJsonVerifier = null,
 		?EntityManagerInterface $entityManager = null,
+		private readonly int $maxDepth = self::DEFAULT_MAX_DEPTH,
 	)
 	{
+		if ($this->maxDepth < 1)
+		{
+			throw new InvalidMaxDepthException("The max depth must be at least 1.");
+		}
+
 		$this->doctrineMetadata = $entityManager?->getMetadataFactory();
 	}
 
@@ -50,7 +58,7 @@ class SimpleNormalizer
 
 		if ($this->isDebug)
 		{
-			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue);
+			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue, $this->maxDepth);
 		}
 
 		return $normalizedValue;
@@ -65,7 +73,7 @@ class SimpleNormalizer
 
 		if ($this->isDebug)
 		{
-			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue);
+			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue, $this->maxDepth);
 		}
 
 		return $normalizedValue;
@@ -83,7 +91,7 @@ class SimpleNormalizer
 
 		if ($this->isDebug)
 		{
-			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue);
+			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue, $this->maxDepth);
 		}
 
 		return $normalizedValue;
@@ -98,6 +106,18 @@ class SimpleNormalizer
 		if (null === $value || \is_scalar($value))
 		{
 			return $value;
+		}
+
+		if (\count($stack) >= $this->maxDepth)
+		{
+			$extendedStack = [...$stack, get_debug_type($value)];
+
+			throw new UnsupportedTypeException(\sprintf(
+				"Maximum normalization depth of %d exceeded when normalizing type %s in stack %s",
+				$this->maxDepth,
+				get_debug_type($value),
+				implode(" > ", array_reverse($extendedStack)),
+			));
 		}
 
 		$stack[] = get_debug_type($value);

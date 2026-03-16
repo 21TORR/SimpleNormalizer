@@ -27,7 +27,7 @@ final class ValidJsonVerifierTest extends TestCase
 		];
 
 		$verifier = new ValidJsonVerifier();
-		$verifier->ensureValidOnlyJsonTypes($value);
+		$verifier->ensureValidOnlyJsonTypes($value, 128);
 		self::assertTrue(true);
 	}
 
@@ -46,7 +46,7 @@ final class ValidJsonVerifierTest extends TestCase
 					new DummyVO(42),
 				],
 			],
-		]);
+		], 128);
 	}
 
 	/**
@@ -64,7 +64,7 @@ final class ValidJsonVerifierTest extends TestCase
 		$verifier->ensureValidOnlyJsonTypes([
 			"first" => new DummyVO(5),
 			"second" => $invalidStdClass,
-		]);
+		], 128);
 	}
 
 	/**
@@ -84,7 +84,7 @@ final class ValidJsonVerifierTest extends TestCase
 					],
 				],
 			],
-		]);
+		], 128);
 	}
 
 	/**
@@ -112,6 +112,29 @@ final class ValidJsonVerifierTest extends TestCase
 					],
 				],
 			],
-		]);
+		], 128);
 	}
+
+	/**
+	 */
+	public function testMaxDepthExceeded () : void
+	{
+		$verifier = new ValidJsonVerifier();
+
+		$this->expectException(IncompleteNormalizationException::class);
+		$this->expectExceptionMessage("Maximum JSON verification depth of 3 exceeded at path '$.a.b.c.d'.");
+
+		$verifier->ensureValidOnlyJsonTypes([
+			"a" => [
+				"b" => [
+					"c" => [
+						"d" => [
+							"e" => 1,
+						],
+					],
+				],
+			],
+		], 3);
+	}
+
 }
