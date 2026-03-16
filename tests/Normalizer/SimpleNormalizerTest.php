@@ -158,7 +158,7 @@ final class SimpleNormalizerTest extends TestCase
 			->with(DummyVO::class)
 			->willReturn(false);
 
-		$entityManager = $this->createMock(EntityManagerInterface::class);
+		$entityManager = $this->createStub(EntityManagerInterface::class);
 		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
 
 		$locator = $this->createMock(ServiceLocator::class);
@@ -197,7 +197,7 @@ final class SimpleNormalizerTest extends TestCase
 			->with(DummyVO::class)
 			->willReturn($classMetaData);
 
-		$entityManager = $this->createMock(EntityManagerInterface::class);
+		$entityManager = $this->createStub(EntityManagerInterface::class);
 		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
 
 		$locator = $this->createMock(ServiceLocator::class);
@@ -236,7 +236,7 @@ final class SimpleNormalizerTest extends TestCase
 			->with(DummyVO::class)
 			->willReturn($classMetaData);
 
-		$entityManager = $this->createMock(EntityManagerInterface::class);
+		$entityManager = $this->createStub(EntityManagerInterface::class);
 		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
 
 		$locator = $this->createMock(ServiceLocator::class);
