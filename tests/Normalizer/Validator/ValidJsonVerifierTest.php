@@ -66,4 +66,52 @@ final class ValidJsonVerifierTest extends TestCase
 			"second" => $invalidStdClass,
 		]);
 	}
+
+	/**
+	 */
+	public function testReportsMixedNumericAndStringKeyPath () : void
+	{
+		$verifier = new ValidJsonVerifier();
+
+		$this->expectException(IncompleteNormalizationException::class);
+		$this->expectExceptionMessage("Found a JSON-incompatible value when normalizing. Found 'Tests\Torr\SimpleNormalizer\Fixture\DummyVO' at path '$.outer.01.2.inner', but expected only scalars, arrays and empty objects.");
+
+		$verifier->ensureValidOnlyJsonTypes([
+			"outer" => [
+				"01" => [
+					2 => [
+						"inner" => new DummyVO(6),
+					],
+				],
+			],
+		]);
+	}
+
+	/**
+	 */
+	public function testReportsVeryDeepPath () : void
+	{
+		$verifier = new ValidJsonVerifier();
+
+		$this->expectException(IncompleteNormalizationException::class);
+		$this->expectExceptionMessage("Found a JSON-incompatible value when normalizing. Found 'Tests\\Torr\\SimpleNormalizer\\Fixture\\DummyVO' at path '$.root.lvl1.lvl2.lvl3.lvl4.lvl5.lvl6.target', but expected only scalars, arrays and empty objects.");
+
+		$verifier->ensureValidOnlyJsonTypes([
+			"root" => [
+				"lvl1" => [
+					"lvl2" => [
+						"lvl3" => [
+							"lvl4" => [
+								"lvl5" => [
+									"lvl6" => [
+										"target" => new DummyVO(9),
+									],
+								],
+							],
+						],
+					],
+				],
+			],
+		]);
+	}
 }

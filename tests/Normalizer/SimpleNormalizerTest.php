@@ -258,6 +258,40 @@ final class SimpleNormalizerTest extends TestCase
 	}
 
 	/**
+	 */
+	public function testWithEntityManagerCachesUnmappedClassName () : void
+	{
+		$metadataFactory = $this->createMock(ClassMetadataFactory::class);
+		$metadataFactory
+			->expects(self::once())
+			->method("hasMetadataFor")
+			->with(DummyVO::class)
+			->willReturn(false);
+		$metadataFactory
+			->expects(self::never())
+			->method("getMetadataFor");
+
+		$entityManager = $this->createStub(EntityManagerInterface::class);
+		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
+
+		$locator = $this->createMock(ServiceLocator::class);
+		$locator->expects(self::exactly(2))
+			->method("get")
+			->with(DummyVO::class)
+			->willReturn(new DummyVONormalizer(5));
+
+		$normalizer = new SimpleNormalizer(
+			objectNormalizers: $locator,
+			isDebug: true,
+			validJsonVerifier: new ValidJsonVerifier(),
+			entityManager: $entityManager,
+		);
+
+		$normalizer->normalize(new DummyVO(5));
+		$normalizer->normalize(new DummyVO(5));
+	}
+
+	/**
 	 * @return ServiceLocator<mixed>
 	 */
 	private function createNormalizerObjectNormalizers (mixed $returnValue) : ServiceLocator
