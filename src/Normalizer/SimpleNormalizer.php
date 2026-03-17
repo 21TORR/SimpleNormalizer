@@ -24,7 +24,6 @@ use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
 class SimpleNormalizer
 {
 	private readonly ?ClassMetadataFactory $doctrineMetadata;
-	private const string STACK_CONTEXT = "simple-normalizer.debug-stack";
 	private const int DEFAULT_MAX_DEPTH = 128;
 
 	/** @var array<class-string, class-string> */
@@ -53,7 +52,7 @@ class SimpleNormalizer
 	 */
 	public function normalize (mixed $value, array $context = []) : mixed
 	{
-		$stack = $this->extractInitialStack($context);
+		$stack = [];
 		$normalizedValue = $this->recursiveNormalize($value, $context, $stack);
 
 		if ($this->isDebug)
@@ -68,7 +67,7 @@ class SimpleNormalizer
 	 */
 	public function normalizeArray (array $array, array $context = []) : array
 	{
-		$stack = $this->extractInitialStack($context);
+		$stack = [];
 		$normalizedValue = $this->recursiveNormalizeArray($array, $context, $stack);
 
 		if ($this->isDebug)
@@ -86,7 +85,7 @@ class SimpleNormalizer
 	public function normalizeMap (array $array, array $context = []) : array|\stdClass
 	{
 		// return stdClass if the array is empty here, as it will be automatically normalized to `{}` in JSON.
-		$stack = $this->extractInitialStack($context);
+		$stack = [];
 		$normalizedValue = $this->recursiveNormalizeArray($array, $context, $stack) ?: new \stdClass();
 
 		if ($this->isDebug)
@@ -143,9 +142,6 @@ class SimpleNormalizer
 					$className = $this->normalizeClassName($value::class);
 					$normalizer = $this->objectNormalizers->get($className);
 					\assert($normalizer instanceof SimpleObjectNormalizerInterface);
-
-					// Preserve debug stack visibility for custom object normalizers.
-					$context[self::STACK_CONTEXT] = $stack;
 
 					return $normalizer->normalize($value, $context, $this);
 				}
@@ -228,26 +224,5 @@ class SimpleNormalizer
 		}
 
 		return $result;
-	}
-
-	/**
-	 * @return list<string>
-	 */
-	private function extractInitialStack (array $context) : array
-	{
-		if (!isset($context[self::STACK_CONTEXT]) || !\is_array($context[self::STACK_CONTEXT]))
-		{
-			return [];
-		}
-
-		$stack = [];
-
-		foreach ($context[self::STACK_CONTEXT] as $entry)
-		{
-			\assert(\is_string($entry));
-			$stack[] = $entry;
-		}
-
-		return $stack;
 	}
 }
