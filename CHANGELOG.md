@@ -9,6 +9,8 @@
 * (improvement) Add dedicated verifier tests for deep-path reporting and first-invalid-element detection.
 * (improvement) Optimize empty `stdClass` detection by using an `(array)` cast check instead of `get_object_vars()`.
 * (improvement) Add a default max-depth guard (128) for normalization and JSON verification to mitigate deep-nesting DoS risk.
+* (improvement) Add stack trace to all relevant exceptions as getter.
+* (improvement) Add stack trace to NormalizationFailedExceptions thrown in custom object normalizers. 
 
 
 1.5.1

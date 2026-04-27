@@ -6,6 +6,8 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVO;
+use Torr\SimpleNormalizer\Context\ContextBag;
+use Torr\SimpleNormalizer\Exception\NormalizationFailedException;
 use Torr\SimpleNormalizer\Exception\ObjectTypeNotSupportedException;
 use Torr\SimpleNormalizer\Normalizer\SimpleNormalizer;
 use Torr\SimpleNormalizer\Normalizer\SimpleObjectNormalizerInterface;
@@ -123,6 +125,69 @@ final class ObjectNormalizationTest extends TestCase
 		catch (ObjectTypeNotSupportedException $exception)
 		{
 			self::assertSame($previous, $exception->getPrevious());
+		}
+	}
+
+	/**
+	 */
+	public function testContextBagErrorsIncludeStackInThrownExceptionMessage () : void
+	{
+		$normalizer = $this->createNormalizer(new class() implements SimpleObjectNormalizerInterface {
+			public function normalize (object $value, array $context, SimpleNormalizer $normalizer) : null
+			{
+				$bag = new ContextBag($context);
+				$bag->getString("required");
+
+				return null;
+			}
+
+			public static function getNormalizedType () : string
+			{
+				return DummyVO::class;
+			}
+		});
+
+		foreach ([[], ["required" => 1]] as $context)
+		{
+			try
+			{
+				$normalizer->normalize(new DummyVO(11), $context);
+				self::fail("Expected an exception to be thrown.");
+			}
+			catch (\Throwable $exception)
+			{
+				self::assertStringContainsString(
+					"at Tests\Torr\SimpleNormalizer\Fixture\DummyVO",
+					$exception->getMessage(),
+				);
+			}
+		}
+	}
+
+	/**
+	 */
+	public function testCustomNormalizationFailedExceptionGetsStack () : void
+	{
+		$normalizer = $this->createNormalizer(new class() implements SimpleObjectNormalizerInterface {
+			public function normalize (object $value, array $context, SimpleNormalizer $normalizer) : mixed
+			{
+				throw new NormalizationFailedException("Custom failure");
+			}
+
+			public static function getNormalizedType () : string
+			{
+				return DummyVO::class;
+			}
+		});
+
+		try
+		{
+			$normalizer->normalize(new DummyVO(11));
+			self::fail("Expected NormalizationFailedException to be thrown.");
+		}
+		catch (NormalizationFailedException $exception)
+		{
+			self::assertSame([DummyVO::class], $exception->getNormalizationStack());
 		}
 	}
 }

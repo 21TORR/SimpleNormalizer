@@ -15,7 +15,7 @@ final class InvalidContextTypeException extends \RuntimeException implements Nor
 		mixed $value,
 		string $expected,
 		?\Throwable $previous = null,
-	) : static
+	) : self
 	{
 		return new self(
 			\sprintf(
