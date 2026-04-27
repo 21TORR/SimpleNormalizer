@@ -1,3 +1,16 @@
+1.6.0
+=====
+
+* (feature) Add `ContextBag` as base helper for using normalizer context.
+* (improvement) Reduce normalization overhead by tracking the debug stack internally across recursion instead of mutating it in context on each nested value.
+* (improvement) Cache Doctrine-normalized class names in `SimpleNormalizer` to avoid repeated metadata lookups for the same object type.
+* (improvement) Add test coverage to ensure class-name normalization is cached across repeated normalization calls.
+* (improvement) Optimize `ValidJsonVerifier` by reusing a mutable path stack during traversal instead of allocating a new path array for each nested element.
+* (improvement) Add dedicated verifier tests for deep-path reporting and first-invalid-element detection.
+* (improvement) Optimize empty `stdClass` detection by using an `(array)` cast check instead of `get_object_vars()`.
+* (improvement) Add a default max-depth guard (128) for normalization and JSON verification to mitigate deep-nesting DoS risk.
+
+
 1.5.1
 =====
 

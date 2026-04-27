@@ -3,6 +3,8 @@
 namespace Tests\Torr\SimpleNormalizer\Normalizer;
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVO;
 use Torr\SimpleNormalizer\Exception\ObjectTypeNotSupportedException;
 use Torr\SimpleNormalizer\Normalizer\SimpleNormalizer;
@@ -80,5 +82,47 @@ final class ObjectNormalizationTest extends TestCase
 
 		$normalizer = $this->createNormalizer();
 		$normalizer->normalize(new DummyVO(11));
+	}
+
+	/**
+	 */
+	public function testMissingNormalizerUsesGet () : void
+	{
+		$locator = $this->createMock(ServiceLocator::class);
+		$locator->expects(self::once())
+			->method("get")
+			->with(DummyVO::class)
+			->willThrowException(new ServiceNotFoundException(DummyVO::class));
+
+		$normalizer = new SimpleNormalizer($locator);
+
+		$this->expectException(ObjectTypeNotSupportedException::class);
+		$this->expectExceptionMessage("Can't normalize type 'Tests\Torr\SimpleNormalizer\Fixture\DummyVO' in stack Tests\Torr\SimpleNormalizer\Fixture\DummyVO");
+		$normalizer->normalize(new DummyVO(11));
+	}
+
+	/**
+	 */
+	public function testMissingNormalizerKeepsPreviousException () : void
+	{
+		$previous = new ServiceNotFoundException(DummyVO::class);
+
+		$locator = $this->createMock(ServiceLocator::class);
+		$locator->expects(self::once())
+			->method("get")
+			->with(DummyVO::class)
+			->willThrowException($previous);
+
+		$normalizer = new SimpleNormalizer($locator);
+
+		try
+		{
+			$normalizer->normalize(new DummyVO(11));
+			self::fail("Expected ObjectTypeNotSupportedException to be thrown.");
+		}
+		catch (ObjectTypeNotSupportedException $exception)
+		{
+			self::assertSame($previous, $exception->getPrevious());
+		}
 	}
 }

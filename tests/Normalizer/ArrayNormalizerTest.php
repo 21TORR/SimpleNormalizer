@@ -45,6 +45,9 @@ final class ArrayNormalizerTest extends TestCase
 		yield [["a" => 1, "b" => 2, "c" => 3, "d" => 4], ["a" => 1, "b" => 2, "c" => 3, "d" => 4]];
 		yield [["a" => 1, "b" => null, "c" => 3, "d" => null], ["a" => 1, "b" => null, "c" => 3, "d" => null]];
 		yield [["empty" => null], ["empty" => null]];
+		yield [[0 => 1, 1 => null, 3 => 4], [0 => 1, 1 => null, 3 => 4]];
+		yield [[1 => 1, 2 => null], [1 => 1, 2 => null]];
+		yield [["01" => 1, 1 => 2], ["01" => 1, 1 => 2]];
 	}
 
 	/**

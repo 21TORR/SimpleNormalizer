@@ -11,6 +11,8 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVO;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVONormalizer;
 use Torr\SimpleNormalizer\Exception\IncompleteNormalizationException;
+use Torr\SimpleNormalizer\Exception\InvalidMaxDepthException;
+use Torr\SimpleNormalizer\Exception\UnsupportedTypeException;
 use Torr\SimpleNormalizer\Normalizer\SimpleNormalizer;
 use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
 
@@ -89,6 +91,26 @@ final class SimpleNormalizerTest extends TestCase
 	}
 
 	/**
+	 */
+	public function testMaxDepthIsPassedToJsonVerifier () : void
+	{
+		$verifier = $this->createMock(ValidJsonVerifier::class);
+		$verifier
+			->expects(self::once())
+			->method("ensureValidOnlyJsonTypes")
+			->with("ok", 7);
+
+		$normalizer = new SimpleNormalizer(
+			objectNormalizers: $this->createNormalizerObjectNormalizers("ok"),
+			isDebug: true,
+			validJsonVerifier: $verifier,
+			maxDepth: 7,
+		);
+
+		$normalizer->normalize(new DummyVO(1));
+	}
+
+	/**
 	 *
 	 */
 	public function testInvalidNormalizer () : void
@@ -158,7 +180,7 @@ final class SimpleNormalizerTest extends TestCase
 			->with(DummyVO::class)
 			->willReturn(false);
 
-		$entityManager = $this->createMock(EntityManagerInterface::class);
+		$entityManager = self::createStub(EntityManagerInterface::class);
 		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
 
 		$locator = $this->createMock(ServiceLocator::class);
@@ -197,7 +219,7 @@ final class SimpleNormalizerTest extends TestCase
 			->with(DummyVO::class)
 			->willReturn($classMetaData);
 
-		$entityManager = $this->createMock(EntityManagerInterface::class);
+		$entityManager = self::createStub(EntityManagerInterface::class);
 		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
 
 		$locator = $this->createMock(ServiceLocator::class);
@@ -215,6 +237,114 @@ final class SimpleNormalizerTest extends TestCase
 		);
 
 		$normalizer->normalize(new DummyVO(5));
+	}
+
+	/**
+	 */
+	public function testWithEntityManagerCachesNormalizedClassName () : void
+	{
+		$classMetaData = new ClassMetadata("SomeClass");
+
+		$metadataFactory = $this->createMock(ClassMetadataFactory::class);
+		$metadataFactory
+			->expects(self::once())
+			->method("hasMetadataFor")
+			->with(DummyVO::class)
+			->willReturn(true);
+
+		$metadataFactory
+			->expects(self::once())
+			->method("getMetadataFor")
+			->with(DummyVO::class)
+			->willReturn($classMetaData);
+
+		$entityManager = self::createStub(EntityManagerInterface::class);
+		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
+
+		$locator = $this->createMock(ServiceLocator::class);
+
+		$locator->expects(self::exactly(2))
+			->method("get")
+			->with("SomeClass")
+			->willReturn(new DummyVONormalizer(5));
+
+		$normalizer = new SimpleNormalizer(
+			objectNormalizers: $locator,
+			isDebug: true,
+			validJsonVerifier: new ValidJsonVerifier(),
+			entityManager: $entityManager,
+		);
+
+		$normalizer->normalize(new DummyVO(5));
+		$normalizer->normalize(new DummyVO(5));
+	}
+
+	/**
+	 */
+	public function testWithEntityManagerCachesUnmappedClassName () : void
+	{
+		$metadataFactory = $this->createMock(ClassMetadataFactory::class);
+		$metadataFactory
+			->expects(self::once())
+			->method("hasMetadataFor")
+			->with(DummyVO::class)
+			->willReturn(false);
+		$metadataFactory
+			->expects(self::never())
+			->method("getMetadataFor");
+
+		$entityManager = self::createStub(EntityManagerInterface::class);
+		$entityManager->method("getMetadataFactory")->willReturn($metadataFactory);
+
+		$locator = $this->createMock(ServiceLocator::class);
+		$locator->expects(self::exactly(2))
+			->method("get")
+			->with(DummyVO::class)
+			->willReturn(new DummyVONormalizer(5));
+
+		$normalizer = new SimpleNormalizer(
+			objectNormalizers: $locator,
+			isDebug: true,
+			validJsonVerifier: new ValidJsonVerifier(),
+			entityManager: $entityManager,
+		);
+
+		$normalizer->normalize(new DummyVO(5));
+		$normalizer->normalize(new DummyVO(5));
+	}
+
+	/**
+	 */
+	public function testMaxDepthExceeded () : void
+	{
+		$normalizer = new SimpleNormalizer(
+			objectNormalizers: new ServiceLocator([]),
+			maxDepth: 2,
+		);
+
+		$this->expectException(UnsupportedTypeException::class);
+		$this->expectExceptionMessage("Maximum normalization depth of 2 exceeded");
+
+		$normalizer->normalize([
+			[
+				[
+					"tooDeep" => true,
+				],
+			],
+		]);
+	}
+
+	/**
+	 */
+	public function testInvalidMaxDepth () : void
+	{
+		$this->expectException(InvalidMaxDepthException::class);
+		$this->expectExceptionMessage("The max depth must be at least 1.");
+
+		new SimpleNormalizer(
+			objectNormalizers: new ServiceLocator([]),
+			maxDepth: 0,
+		);
 	}
 
 	/**

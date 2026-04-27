@@ -12,11 +12,14 @@ use Torr\SimpleNormalizer\Exception\IncompleteNormalizationException;
 class ValidJsonVerifier
 {
 	/**
-	 * Ensures that only valid JSON types are present in the value, that means scalars, arrays and empty objects.
+	 * Ensures that only valid JSON types are present in the value that means scalars, arrays, and empty objects.
+	 *
+	 * @param positive-int $maxDepth
 	 */
-	public function ensureValidOnlyJsonTypes (mixed $value) : void
+	public function ensureValidOnlyJsonTypes (mixed $value, int $maxDepth) : void
 	{
-		$invalidElement = $this->findInvalidJsonElement($value);
+		$path = ["$"];
+		$invalidElement = $this->findInvalidJsonElement($value, $path, $maxDepth);
 
 		if (null !== $invalidElement)
 		{
@@ -34,10 +37,21 @@ class ValidJsonVerifier
 	 * Searches through the value and looks for anything that isn't valid JSON
 	 * (scalars, arrays or empty objects).
 	 *
+	 * @param positive-int $maxDepth
+	 *
 	 * @return InvalidJsonElement|null returns null if everything is valid, otherwise the invalid value
 	 */
-	private function findInvalidJsonElement (mixed $value, array $path = ["$"]) : ?InvalidJsonElement
+	private function findInvalidJsonElement (mixed $value, array &$path, int $maxDepth) : ?InvalidJsonElement
 	{
+		if (\count($path) - 1 > $maxDepth)
+		{
+			throw new IncompleteNormalizationException(\sprintf(
+				"Maximum JSON verification depth of %d exceeded at path '%s'.",
+				$maxDepth,
+				implode(".", $path),
+			));
+		}
+
 		// scalars are always valid
 		if (null === $value || \is_scalar($value))
 		{
@@ -47,19 +61,18 @@ class ValidJsonVerifier
 		// only empty stdClass objects are allowed (as they are used to serialize to `{}`)
 		if (\is_object($value))
 		{
-			return $value instanceof \stdClass && [] === get_object_vars($value)
+			return $value instanceof \stdClass && [] === (array) $value
 				? null
-				: new InvalidJsonElement($value, $path);
+				: new InvalidJsonElement($value, [...$path]);
 		}
 
 		if (\is_array($value))
 		{
 			foreach ($value as $key => $item)
 			{
-				$invalidItem = $this->findInvalidJsonElement(
-					$item,
-					[...$path, $key],
-				);
+				$path[] = $key;
+				$invalidItem = $this->findInvalidJsonElement($item, $path, $maxDepth);
+				array_pop($path);
 
 				if (null !== $invalidItem)
 				{
@@ -70,6 +83,6 @@ class ValidJsonVerifier
 			return null;
 		}
 
-		return new InvalidJsonElement($value, $path);
+		return new InvalidJsonElement($value, [...$path]);
 	}
 }

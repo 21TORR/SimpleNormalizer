@@ -6,6 +6,10 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadataFactory;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\DependencyInjection\ServiceLocator;
+use Torr\SimpleNormalizer\Exception\Context\InvalidContextTypeException;
+use Torr\SimpleNormalizer\Exception\Context\MissingContextException;
+use Torr\SimpleNormalizer\Exception\InvalidMaxDepthException;
+use Torr\SimpleNormalizer\Exception\NormalizationFailedException;
 use Torr\SimpleNormalizer\Exception\ObjectTypeNotSupportedException;
 use Torr\SimpleNormalizer\Exception\UnsupportedTypeException;
 use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
@@ -18,14 +22,15 @@ use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
  * The verifier is done on the top-level of every method (instead of at the point where the invalid values could occur
  * = the object normalizers), as this way we can provide a full path to the invalid element in the JSON.
  *
- * @readonly
- *
  * @final
  */
 class SimpleNormalizer
 {
 	private readonly ?ClassMetadataFactory $doctrineMetadata;
-	private const string STACK_CONTEXT = "simple-normalizer.debug-stack";
+	private const int DEFAULT_MAX_DEPTH = 128;
+
+	/** @var array<class-string, class-string> */
+	private array $normalizedClassNames = [];
 
 	/**
 	 * @param ServiceLocator<SimpleObjectNormalizerInterface> $objectNormalizers
@@ -35,8 +40,14 @@ class SimpleNormalizer
 		private readonly bool $isDebug = false,
 		private readonly ?ValidJsonVerifier $validJsonVerifier = null,
 		?EntityManagerInterface $entityManager = null,
+		private readonly int $maxDepth = self::DEFAULT_MAX_DEPTH,
 	)
 	{
+		if ($this->maxDepth < 1)
+		{
+			throw new InvalidMaxDepthException("The max depth must be at least 1.");
+		}
+
 		$this->doctrineMetadata = $entityManager?->getMetadataFactory();
 	}
 
@@ -44,11 +55,12 @@ class SimpleNormalizer
 	 */
 	public function normalize (mixed $value, array $context = []) : mixed
 	{
-		$normalizedValue = $this->recursiveNormalize($value, $context);
+		$stack = [];
+		$normalizedValue = $this->recursiveNormalize($value, $context, $stack);
 
 		if ($this->isDebug)
 		{
-			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue);
+			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue, $this->maxDepth);
 		}
 
 		return $normalizedValue;
@@ -58,11 +70,12 @@ class SimpleNormalizer
 	 */
 	public function normalizeArray (array $array, array $context = []) : array
 	{
-		$normalizedValue = $this->recursiveNormalizeArray($array, $context);
+		$stack = [];
+		$normalizedValue = $this->recursiveNormalizeArray($array, $context, $stack);
 
 		if ($this->isDebug)
 		{
-			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue);
+			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue, $this->maxDepth);
 		}
 
 		return $normalizedValue;
@@ -75,11 +88,12 @@ class SimpleNormalizer
 	public function normalizeMap (array $array, array $context = []) : array|\stdClass
 	{
 		// return stdClass if the array is empty here, as it will be automatically normalized to `{}` in JSON.
-		$normalizedValue = $this->recursiveNormalizeArray($array, $context) ?: new \stdClass();
+		$stack = [];
+		$normalizedValue = $this->recursiveNormalizeArray($array, $context, $stack) ?: new \stdClass();
 
 		if ($this->isDebug)
 		{
-			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue);
+			$this->validJsonVerifier?->ensureValidOnlyJsonTypes($normalizedValue, $this->maxDepth);
 		}
 
 		return $normalizedValue;
@@ -89,58 +103,82 @@ class SimpleNormalizer
 	 * The actual normalize logic, that recursively normalizes the value.
 	 * It must never call one of the public methods above and just normalizes the value.
 	 */
-	private function recursiveNormalize (mixed $value, array $context = []) : mixed
+	private function recursiveNormalize (mixed $value, array $context, array &$stack) : mixed
 	{
 		if (null === $value || \is_scalar($value))
 		{
 			return $value;
 		}
 
-		if (!isset($context[self::STACK_CONTEXT]) || !\is_array($context[self::STACK_CONTEXT]))
+		if (\count($stack) >= $this->maxDepth)
 		{
-			$context[self::STACK_CONTEXT] = [];
+			$extendedStack = [...$stack, get_debug_type($value)];
+
+			throw new UnsupportedTypeException(\sprintf(
+				"Maximum normalization depth of %d exceeded when normalizing type %s in stack %s",
+				$this->maxDepth,
+				get_debug_type($value),
+				implode(" > ", array_reverse($extendedStack)),
+			));
 		}
 
-		$context[self::STACK_CONTEXT][] = get_debug_type($value);
+		$stack[] = get_debug_type($value);
 
-		if (\is_array($value))
+		try
 		{
-			return $this->recursiveNormalizeArray($value, $context);
-		}
+			if (\is_array($value))
+			{
+				return $this->recursiveNormalizeArray($value, $context, $stack);
+			}
 
-		if (\is_object($value))
+			if (\is_object($value))
+			{
+				// Allow empty stdClass as a way to force a JSON {} instead of an
+				// array which would encode to []
+				if ($value instanceof \stdClass && [] === (array) $value)
+				{
+					return $value;
+				}
+
+				try
+				{
+					$className = $this->normalizeClassName($value::class);
+					$normalizer = $this->objectNormalizers->get($className);
+					\assert($normalizer instanceof SimpleObjectNormalizerInterface);
+
+					return $normalizer->normalize($value, $context, $this);
+				}
+				catch (ServiceNotFoundException $exception)
+				{
+					throw new ObjectTypeNotSupportedException(\sprintf(
+						"Can't normalize type '%s' in stack %s",
+						get_debug_type($value),
+						implode(" > ", array_reverse($stack)),
+					), 0, $exception);
+				}
+				catch (MissingContextException|InvalidContextTypeException $exception)
+				{
+					throw new NormalizationFailedException(
+						message: \sprintf(
+							"Normalization failed: %s at %s",
+							$exception->getMessage(),
+							implode(" > ", array_reverse($stack)),
+						),
+						previous: $exception,
+					);
+				}
+			}
+
+			throw new UnsupportedTypeException(\sprintf(
+				"Can't normalize type %s in stack %s",
+				get_debug_type($value),
+				implode(" > ", array_reverse($stack)),
+			));
+		}
+		finally
 		{
-			// Allow empty stdClass as a way to force a JSON {} instead of an
-			// array which would encode to []
-			if ($value instanceof \stdClass && [] === get_object_vars($value))
-			{
-				return $value;
-			}
-
-			try
-			{
-				$className = $this->normalizeClassName($value::class);
-
-				$normalizer = $this->objectNormalizers->get($className);
-				\assert($normalizer instanceof SimpleObjectNormalizerInterface);
-
-				return $normalizer->normalize($value, $context, $this);
-			}
-			catch (ServiceNotFoundException $exception)
-			{
-				throw new ObjectTypeNotSupportedException(\sprintf(
-					"Can't normalize type '%s' in stack %s",
-					get_debug_type($value),
-					implode(" > ", array_reverse($context[self::STACK_CONTEXT])),
-				), 0, $exception);
-			}
+			array_pop($stack);
 		}
-
-		throw new UnsupportedTypeException(\sprintf(
-			"Can't normalize type %s in stack %s",
-			get_debug_type($value),
-			implode(" > ", array_reverse($context[self::STACK_CONTEXT])),
-		));
 	}
 
 	/**
@@ -158,7 +196,12 @@ class SimpleNormalizer
 			return $className;
 		}
 
-		return $this->doctrineMetadata->hasMetadataFor($className)
+		if (isset($this->normalizedClassNames[$className]))
+		{
+			return $this->normalizedClassNames[$className];
+		}
+
+		return $this->normalizedClassNames[$className] = $this->doctrineMetadata->hasMetadataFor($className)
 			? $this->doctrineMetadata->getMetadataFor($className)->getName()
 			: $className;
 	}
@@ -167,14 +210,14 @@ class SimpleNormalizer
 	 * The actual customized normalization logic for arrays, that recursively normalizes the value.
 	 * It must never call one of the public methods above and just normalizes the value.
 	 */
-	private function recursiveNormalizeArray (array $array, array $context = []) : array
+	private function recursiveNormalizeArray (array $array, array $context, array &$stack) : array
 	{
 		$result = [];
 		$isList = array_is_list($array);
 
 		foreach ($array as $key => $value)
 		{
-			$normalized = $this->recursiveNormalize($value, $context);
+			$normalized = $this->recursiveNormalize($value, $context, $stack);
 
 			// if the array was a list and the normalized value is null, just filter it out
 			if ($isList && null === $normalized)

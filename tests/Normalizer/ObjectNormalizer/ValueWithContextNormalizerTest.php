@@ -36,10 +36,6 @@ final class ValueWithContextNormalizerTest extends TestCase
 				[
 					"test" => 123,
 					"o" => "hai",
-					"simple-normalizer.debug-stack" => [
-						get_debug_type($value),
-						DummyVO::class,
-					],
 				],
 			);
 
@@ -52,5 +48,59 @@ final class ValueWithContextNormalizerTest extends TestCase
 			"test" => 123,
 			"o" => 5,
 		]);
+	}
+
+	/**
+	 */
+	public function testEmptyWrappedContextKeepsIncomingContext () : void
+	{
+		$value = new ValueWithContext(new DummyVO(5), []);
+
+		$dummyNormalizer = $this->createMock(SimpleObjectNormalizerInterface::class);
+		$dummyNormalizer
+			->expects(self::once())
+			->method("normalize")
+			->with(
+				$value->value,
+				[
+					"test" => 123,
+				],
+			);
+
+		$normalizer = new SimpleNormalizer(new ServiceLocator([
+			ValueWithContext::class => static fn () => new ValueWithContextNormalizer(),
+			DummyVO::class => static fn () => $dummyNormalizer,
+		]));
+
+		$normalizer->normalize($value, [
+			"test" => 123,
+		]);
+	}
+
+	/**
+	 */
+	public function testEmptyIncomingContextUsesWrappedContext () : void
+	{
+		$value = new ValueWithContext(new DummyVO(5), [
+			"o" => "hai",
+		]);
+
+		$dummyNormalizer = $this->createMock(SimpleObjectNormalizerInterface::class);
+		$dummyNormalizer
+			->expects(self::once())
+			->method("normalize")
+			->with(
+				$value->value,
+				[
+					"o" => "hai",
+				],
+			);
+
+		$normalizer = new SimpleNormalizer(new ServiceLocator([
+			ValueWithContext::class => static fn () => new ValueWithContextNormalizer(),
+			DummyVO::class => static fn () => $dummyNormalizer,
+		]));
+
+		$normalizer->normalize($value);
 	}
 }
