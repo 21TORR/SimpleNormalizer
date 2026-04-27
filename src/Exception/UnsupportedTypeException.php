@@ -2,6 +2,6 @@
 
 namespace Torr\SimpleNormalizer\Exception;
 
-final class UnsupportedTypeException extends \RuntimeException implements NormalizerExceptionInterface
+final class UnsupportedTypeException extends AbstractNormalizerException
 {
 }

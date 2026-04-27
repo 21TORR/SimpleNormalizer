@@ -5,6 +5,6 @@ namespace Torr\SimpleNormalizer\Exception;
 /**
  * Generic failure exception, for usage inside custom normalizers.
  */
-class NormalizationFailedException extends \RuntimeException implements NormalizerExceptionInterface
+class NormalizationFailedException extends AbstractNormalizerException
 {
 }

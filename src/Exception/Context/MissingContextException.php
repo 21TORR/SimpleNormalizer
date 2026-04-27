@@ -15,7 +15,7 @@ final class MissingContextException extends \InvalidArgumentException implements
 		string $missingKey,
 		array $allKeys,
 		?\Throwable $previous = null,
-	) : static
+	) : self
 	{
 		return new self(
 			\sprintf(

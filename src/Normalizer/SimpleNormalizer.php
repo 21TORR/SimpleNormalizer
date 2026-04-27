@@ -87,8 +87,9 @@ class SimpleNormalizer
 	 */
 	public function normalizeMap (array $array, array $context = []) : array|\stdClass
 	{
-		// return stdClass if the array is empty here, as it will be automatically normalized to `{}` in JSON.
 		$stack = [];
+
+		// return stdClass if the array is empty here, as it will be automatically normalized to `{}` in JSON.
 		$normalizedValue = $this->recursiveNormalizeArray($array, $context, $stack) ?: new \stdClass();
 
 		if ($this->isDebug)
@@ -100,8 +101,10 @@ class SimpleNormalizer
 	}
 
 	/**
-	 * The actual normalize logic, that recursively normalizes the value.
+	 * The actual normalization logic that recursively normalizes the value.
 	 * It must never call one of the public methods above and just normalizes the value.
+	 *
+	 * @param list<string> $stack
 	 */
 	private function recursiveNormalize (mixed $value, array $context, array &$stack) : mixed
 	{
@@ -113,13 +116,17 @@ class SimpleNormalizer
 		if (\count($stack) >= $this->maxDepth)
 		{
 			$extendedStack = [...$stack, get_debug_type($value)];
+			$normalizationStack = self::prepareStack($extendedStack);
 
-			throw new UnsupportedTypeException(\sprintf(
-				"Maximum normalization depth of %d exceeded when normalizing type %s in stack %s",
-				$this->maxDepth,
-				get_debug_type($value),
-				implode(" > ", array_reverse($extendedStack)),
-			));
+			throw new UnsupportedTypeException(
+				message: \sprintf(
+					"Maximum normalization depth of %d exceeded when normalizing type %s in stack %s",
+					$this->maxDepth,
+					get_debug_type($value),
+					implode(" > ", $normalizationStack),
+				),
+				normalizationStack: $normalizationStack,
+			);
 		}
 
 		$stack[] = get_debug_type($value);
@@ -150,30 +157,53 @@ class SimpleNormalizer
 				}
 				catch (ServiceNotFoundException $exception)
 				{
-					throw new ObjectTypeNotSupportedException(\sprintf(
-						"Can't normalize type '%s' in stack %s",
-						get_debug_type($value),
-						implode(" > ", array_reverse($stack)),
-					), 0, $exception);
+					$normalizationStack = self::prepareStack($stack);
+
+					throw new ObjectTypeNotSupportedException(
+						message: \sprintf(
+							"Can't normalize type '%s' in stack %s",
+							get_debug_type($value),
+							implode(" > ", $normalizationStack),
+						),
+						previous: $exception,
+						normalizationStack: $normalizationStack,
+					);
 				}
 				catch (MissingContextException|InvalidContextTypeException $exception)
 				{
+					$normalizationStack = self::prepareStack($stack);
+
 					throw new NormalizationFailedException(
 						message: \sprintf(
 							"Normalization failed: %s at %s",
 							$exception->getMessage(),
-							implode(" > ", array_reverse($stack)),
+							implode(" > ", $normalizationStack),
 						),
 						previous: $exception,
+						normalizationStack: $normalizationStack,
+					);
+				}
+				catch (NormalizationFailedException $exception)
+				{
+					// rewrap to add normalization stack
+					throw new NormalizationFailedException(
+						message: $exception->getMessage(),
+						previous: $exception,
+						normalizationStack: self::prepareStack($stack),
 					);
 				}
 			}
 
-			throw new UnsupportedTypeException(\sprintf(
-				"Can't normalize type %s in stack %s",
-				get_debug_type($value),
-				implode(" > ", array_reverse($stack)),
-			));
+			$normalizationStack = self::prepareStack($stack);
+
+			throw new UnsupportedTypeException(
+				message: \sprintf(
+					"Can't normalize type %s in stack %s",
+					get_debug_type($value),
+					implode(" > ", $normalizationStack),
+				),
+				normalizationStack: $normalizationStack,
+			);
 		}
 		finally
 		{
@@ -209,6 +239,8 @@ class SimpleNormalizer
 	/**
 	 * The actual customized normalization logic for arrays, that recursively normalizes the value.
 	 * It must never call one of the public methods above and just normalizes the value.
+	 *
+	 * @param list<string> $stack
 	 */
 	private function recursiveNormalizeArray (array $array, array $context, array &$stack) : array
 	{
@@ -238,5 +270,16 @@ class SimpleNormalizer
 		}
 
 		return $result;
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	private static function prepareStack (array $rawStack) : array
+	{
+		$stack = array_reverse($rawStack);
+		\assert(array_is_list($stack));
+
+		return $stack;
 	}
 }
