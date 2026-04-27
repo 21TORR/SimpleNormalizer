@@ -7,6 +7,7 @@ use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Tests\Torr\SimpleNormalizer\Fixture\DummyVO;
 use Torr\SimpleNormalizer\Context\ContextBag;
+use Torr\SimpleNormalizer\Exception\NormalizationFailedException;
 use Torr\SimpleNormalizer\Exception\ObjectTypeNotSupportedException;
 use Torr\SimpleNormalizer\Normalizer\SimpleNormalizer;
 use Torr\SimpleNormalizer\Normalizer\SimpleObjectNormalizerInterface;
@@ -160,6 +161,33 @@ final class ObjectNormalizationTest extends TestCase
 					$exception->getMessage(),
 				);
 			}
+		}
+	}
+
+	/**
+	 */
+	public function testCustomNormalizationFailedExceptionGetsStack () : void
+	{
+		$normalizer = $this->createNormalizer(new class() implements SimpleObjectNormalizerInterface {
+			public function normalize (object $value, array $context, SimpleNormalizer $normalizer) : mixed
+			{
+				throw new NormalizationFailedException("Custom failure");
+			}
+
+			public static function getNormalizedType () : string
+			{
+				return DummyVO::class;
+			}
+		});
+
+		try
+		{
+			$normalizer->normalize(new DummyVO(11));
+			self::fail("Expected NormalizationFailedException to be thrown.");
+		}
+		catch (NormalizationFailedException $exception)
+		{
+			self::assertSame([DummyVO::class], $exception->getNormalizationStack());
 		}
 	}
 }
