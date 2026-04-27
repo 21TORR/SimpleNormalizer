@@ -6,7 +6,10 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadataFactory;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\DependencyInjection\ServiceLocator;
+use Torr\SimpleNormalizer\Exception\Context\InvalidContextTypeException;
+use Torr\SimpleNormalizer\Exception\Context\MissingContextException;
 use Torr\SimpleNormalizer\Exception\InvalidMaxDepthException;
+use Torr\SimpleNormalizer\Exception\NormalizationFailedException;
 use Torr\SimpleNormalizer\Exception\ObjectTypeNotSupportedException;
 use Torr\SimpleNormalizer\Exception\UnsupportedTypeException;
 use Torr\SimpleNormalizer\Normalizer\Validator\ValidJsonVerifier;
@@ -152,6 +155,17 @@ class SimpleNormalizer
 						get_debug_type($value),
 						implode(" > ", array_reverse($stack)),
 					), 0, $exception);
+				}
+				catch (MissingContextException|InvalidContextTypeException $exception)
+				{
+					throw new NormalizationFailedException(
+						message: \sprintf(
+							"Normalization failed: %s at %s",
+							$exception->getMessage(),
+							implode(" > ", array_reverse($stack)),
+						),
+						previous: $exception,
+					);
 				}
 			}
 
